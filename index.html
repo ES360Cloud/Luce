@@ -168,7 +168,6 @@
         }
         .answer-input:focus { border-color: var(--primary-blue); }
 
-        /* Teclado numérico */
         .numpad {
             display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
             width: 100%; max-width: 320px;
@@ -360,7 +359,7 @@
     </div>
 
     <script>
-        // === PEGA AQUÍ TU URL DE GOOGLE APPS SCRIPT ===
+        // === PEGA AQUÍ TU URL DE GOOGLE APPS SCRIPT TERMINADA EN /exec ===
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyDYOGQixgKb1lQ5bKWFqyxoTHolupdrjQhEyo7MQpGRNw2BcTmKtpyKYsEKLSJuEom/exec'; 
         
         let currentMathProblem = null;
@@ -387,6 +386,33 @@
             "Mmm, parece que no es eso. ¡Hagamos otro, tú puedes! ✨",
             "Tranquila Luchi, velo con tu papá y a la próxima sale seguro. 😉"
         ];
+
+        function fetchApi(action, params = {}) {
+            return new Promise((resolve, reject) => {
+                const callbackName = 'jsonp_cb_' + Math.round(100000 * Math.random());
+                let url = `${SCRIPT_URL}?action=${action}&callback=${callbackName}`;
+                
+                for (let key in params) {
+                    url += `&${key}=${encodeURIComponent(params[key])}`;
+                }
+
+                window[callbackName] = function(data) {
+                    delete window[callbackName];
+                    document.body.removeChild(script);
+                    resolve(data);
+                };
+
+                const script = document.createElement('script');
+                script.src = url;
+                script.onerror = function() {
+                    delete window[callbackName];
+                    document.body.removeChild(script);
+                    reject(new Error('Error de conexión con la API'));
+                };
+                
+                document.body.appendChild(script);
+            });
+        }
 
         function typeNum(char) {
             const input = document.getElementById('math-answer');
@@ -435,8 +461,7 @@
             document.getElementById('math-level-badge').innerText = `Nivel: ${currentDifficultyLevel}`;
 
             try {
-                const response = await fetch(`${SCRIPT_URL}?action=getMath&level=${currentDifficultyLevel}`);
-                const problem = await response.json();
+                const problem = await fetchApi('getMath', { level: currentDifficultyLevel });
                 onMathProblemLoaded(problem && problem.rowId ? problem : null);
             } catch (error) {
                 onServerError(error);
@@ -463,9 +488,11 @@
             document.getElementById('math-input-group').style.display = 'none';
 
             try {
-                const url = `${SCRIPT_URL}?action=checkMath&rowId=${currentMathProblem.rowId}&userAnswer=${encodeURIComponent(userAnswer)}&expectedAnswer=${encodeURIComponent(currentMathProblem.respuestaEsperada)}`;
-                const response = await fetch(url);
-                const data = await response.json();
+                const data = await fetchApi('checkMath', {
+                    rowId: currentMathProblem.rowId,
+                    userAnswer: userAnswer,
+                    expectedAnswer: currentMathProblem.respuestaEsperada
+                });
                 onMathChecked(data.isCorrect);
             } catch (error) {
                 onServerError(error);
@@ -520,7 +547,7 @@
             showLoading(true);
             
             if (currentDictationId) {
-                fetch(`${SCRIPT_URL}?action=markDictation&rowId=${currentDictationId}`).catch(e => console.log(e));
+                fetchApi('markDictation', { rowId: currentDictationId }).catch(e => console.log(e));
                 currentDictationId = null;
             }
 
@@ -530,8 +557,7 @@
             document.getElementById('btn-load-next-dict').style.display = 'block';
             
             try {
-                const response = await fetch(`${SCRIPT_URL}?action=getDictation`);
-                const data = await response.json();
+                const data = await fetchApi('getDictation');
                 onDictationLoaded(data && data.rowId ? data : null);
             } catch (error) {
                 onServerError(error);
