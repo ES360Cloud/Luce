@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <link rel="icon" type="image/png" href="https://i.ibb.co/B5704YPp/asd-1-1.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>¡Luce Aprende!</title>
+    <link rel="icon" type="image/png" href="https://i.ibb.co/B5704YPp/asd-1-1.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
@@ -70,7 +70,11 @@
 
         .content-wrapper { position: relative; z-index: 1; }
 
-        .header { text-align: center; margin-bottom: 40px; }
+        .header { text-align: center; margin-bottom: 40px; display: flex; flex-direction: column; align-items: center; }
+        .header img {
+            width: 100px; height: 100px; border-radius: 25px; margin-bottom: 15px; 
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1); object-fit: cover;
+        }
         .header h1 {
             font-size: 3rem;
             background: linear-gradient(to right, var(--primary-blue), var(--primary-pink));
@@ -153,23 +157,38 @@
             padding: 30px; margin-bottom: 25px;
         }
 
-        .problem-text { font-size: 1.5rem; line-height: 1.6; margin-bottom: 20px; font-weight: 600; }
+        .problem-text { font-size: 1.5rem; line-height: 1.6; margin-bottom: 20px; font-weight: 600; text-align: center;}
 
-        .input-group { display: flex; flex-direction: column; gap: 15px; align-items: center; }
+        .input-group { display: flex; flex-direction: column; gap: 20px; align-items: center; width: 100%; }
 
         .answer-input {
-            width: 100%; max-width: 300px; padding: 15px 20px;
+            width: 100%; max-width: 320px; padding: 15px 20px;
             font-size: 1.5rem; font-family: 'Nunito', sans-serif; text-align: center;
             border: 3px solid #cbd5e1; border-radius: 15px; outline: none; transition: border-color 0.3s;
         }
         .answer-input:focus { border-color: var(--primary-blue); }
 
+        /* Teclado numérico */
+        .numpad {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+            width: 100%; max-width: 320px;
+        }
+        .num-btn {
+            background: white; border: 2px solid #e2e8f0; border-radius: 15px;
+            font-size: 1.8rem; font-family: 'Fredoka', sans-serif; color: var(--primary-blue);
+            padding: 15px 0; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: all 0.1s; display: flex; justify-content: center; align-items: center;
+            -webkit-tap-highlight-color: transparent; user-select: none;
+        }
+        .num-btn:active { transform: scale(0.92); background: #f1f5f9; }
+        .num-btn.pink-text { color: var(--primary-pink); font-size: 1.4rem; }
+
         .btn-primary {
             background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
-            color: white; border: none; padding: 15px 40px; font-size: 1.2rem;
+            color: white; border: none; padding: 15px 40px; font-size: 1.2rem; width: 100%; max-width: 320px;
             font-weight: bold; font-family: 'Nunito', sans-serif; border-radius: 25px;
             cursor: pointer; box-shadow: 0 10px 20px rgba(79, 172, 254, 0.3);
-            transition: transform 0.2s, box-shadow 0.2s; display: flex; align-items: center; gap: 10px;
+            transition: transform 0.2s, box-shadow 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px;
         }
         .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 25px rgba(79, 172, 254, 0.4); }
         .btn-primary:disabled { background: #94a3b8; box-shadow: none; cursor: not-allowed; transform: none; }
@@ -245,11 +264,11 @@
         </div>
 
         <div class="content-wrapper">
-<div class="header">
-    <img src="https://i.ibb.co/B5704YPp/asd-1-1.png" alt="Luce Logo" style="width: 120px; height: 120px; border-radius: 25px; margin-bottom: 10px; box-shadow: 0 10px 20px rgba(0,0,0,0.1);">
-    <h1>¡Hola Luchi! 🌟</h1>
-    <p>¿Qué aventura vamos a elegir hoy?</p>
-</div>
+            <div class="header">
+                <img src="https://i.ibb.co/B5704YPp/asd-1-1.png" alt="Luce Logo">
+                <h1>¡Hola Luchi! 🌟</h1>
+                <p>¿Qué aventura vamos a elegir hoy?</p>
+            </div>
 
             <div id="view-home" class="view active">
                 <div class="home-menu">
@@ -274,8 +293,24 @@
 
                 <div class="card">
                     <div class="problem-text" id="math-question"></div>
-                    <div class="input-group">
-                        <input type="text" id="math-answer" class="answer-input" placeholder="Escribe tu respuesta aquí" autocomplete="off">
+                    <div class="input-group" id="math-input-group">
+                        <input type="text" id="math-answer" class="answer-input" placeholder="Toca aquí para escribir letras..." autocomplete="off">
+                        
+                        <div class="numpad" id="math-numpad">
+                            <button class="num-btn" onclick="typeNum('1')">1</button>
+                            <button class="num-btn" onclick="typeNum('2')">2</button>
+                            <button class="num-btn" onclick="typeNum('3')">3</button>
+                            <button class="num-btn" onclick="typeNum('4')">4</button>
+                            <button class="num-btn" onclick="typeNum('5')">5</button>
+                            <button class="num-btn" onclick="typeNum('6')">6</button>
+                            <button class="num-btn" onclick="typeNum('7')">7</button>
+                            <button class="num-btn" onclick="typeNum('8')">8</button>
+                            <button class="num-btn" onclick="typeNum('9')">9</button>
+                            <button class="num-btn pink-text" onclick="typeNum(' ')"><i class="fa-solid fa-minus"></i></button>
+                            <button class="num-btn" onclick="typeNum('0')">0</button>
+                            <button class="num-btn pink-text" onclick="deleteNum()"><i class="fa-solid fa-delete-left"></i></button>
+                        </div>
+
                         <button class="btn-primary" id="btn-check-math" onclick="checkMathAnswer()">
                             <i class="fa-solid fa-check"></i> ¡Comprobar!
                         </button>
@@ -283,7 +318,7 @@
                     <div id="math-feedback" class="feedback-msg"></div>
                 </div>
                 
-                <button id="btn-next-math" class="btn-primary" style="width: 100%; display: none; justify-content: center; background: linear-gradient(135deg, #10b981, #059669);" onclick="loadNextMath()">
+                <button id="btn-next-math" class="btn-primary" style="width: 100%; display: none; background: linear-gradient(135deg, #10b981, #059669);" onclick="loadNextMath()">
                     Siguiente Problema <i class="fa-solid fa-arrow-right"></i>
                 </button>
             </div>
@@ -303,7 +338,7 @@
                         <button class="btn-play" id="btn-play-dictation" onclick="playCurrentSentence()">
                             <i class="fa-solid fa-play" id="play-icon"></i>
                         </button>
-                        <button class="btn-primary" id="btn-next-sentence" onclick="nextSentence()" style="display: none;">
+                        <button class="btn-primary" id="btn-next-sentence" onclick="nextSentence()" style="display: none; max-width: 250px;">
                             Siguiente Oración <i class="fa-solid fa-arrow-right"></i>
                         </button>
                     </div>
@@ -326,7 +361,7 @@
 
     <script>
         // === PEGA AQUÍ TU URL DE GOOGLE APPS SCRIPT ===
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyDYOGQixgKb1lQ5bKWFqyxoTHolupdrjQhEyo7MQpGRNw2BcTmKtpyKYsEKLSJuEom/exec'; 
+        const SCRIPT_URL = 'PEGAR_AQUI_LA_URL'; 
         
         let currentMathProblem = null;
         let consecutiveMathWins = 0;
@@ -353,6 +388,16 @@
             "Tranquila Luchi, velo con tu papá y a la próxima sale seguro. 😉"
         ];
 
+        function typeNum(char) {
+            const input = document.getElementById('math-answer');
+            input.value += char;
+        }
+
+        function deleteNum() {
+            const input = document.getElementById('math-answer');
+            input.value = input.value.slice(0, -1);
+        }
+
         function showView(viewId) {
             document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
             document.getElementById(viewId).classList.add('active');
@@ -375,16 +420,16 @@
         function startMath() {
             showView('view-math');
             document.querySelector('.header p').innerText = "¡A pensar fuerte, Luchi!";
-            document.getElementById('math-answer').style.display = 'block';
-            document.getElementById('btn-check-math').style.display = 'flex';
+            document.getElementById('math-input-group').style.display = 'flex';
+            document.getElementById('math-answer').disabled = false;
             loadNextMath();
         }
 
         async function loadNextMath() {
             showLoading(true);
             document.getElementById('math-answer').value = '';
+            document.getElementById('math-input-group').style.display = 'flex';
             document.getElementById('math-answer').disabled = false;
-            document.getElementById('btn-check-math').style.display = 'flex';
             document.getElementById('btn-next-math').style.display = 'none';
             document.getElementById('math-feedback').className = 'feedback-msg';
             document.getElementById('math-level-badge').innerText = `Nivel: ${currentDifficultyLevel}`;
@@ -402,15 +447,12 @@
             showLoading(false);
             if (!problem) {
                 document.getElementById('math-question').innerText = "¡Felicitaciones! 🎉 Los has resuelto todos. Ve con tu papá a pedirle más ejercicios.";
-                document.getElementById('btn-check-math').style.display = 'none';
-                document.getElementById('math-answer').style.display = 'none';
+                document.getElementById('math-input-group').style.display = 'none';
                 triggerConfetti();
                 return;
             }
             currentMathProblem = problem;
             document.getElementById('math-question').innerText = problem.enunciado;
-            document.getElementById('btn-check-math').disabled = false;
-            setTimeout(() => document.getElementById('math-answer').focus(), 100);
         }
 
         async function checkMathAnswer() {
@@ -418,8 +460,7 @@
             if (!userAnswer) return;
 
             showLoading(true);
-            document.getElementById('math-answer').disabled = true;
-            document.getElementById('btn-check-math').style.display = 'none';
+            document.getElementById('math-input-group').style.display = 'none';
 
             try {
                 const url = `${SCRIPT_URL}?action=checkMath&rowId=${currentMathProblem.rowId}&userAnswer=${encodeURIComponent(userAnswer)}&expectedAnswer=${encodeURIComponent(currentMathProblem.respuestaEsperada)}`;
@@ -451,10 +492,6 @@
                 feedbackEl.className = 'feedback-msg error';
             }
             document.getElementById('btn-next-math').style.display = 'flex';
-        }
-
-        function triggerConfetti() {
-            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 }, colors: ['#4facfe', '#00f2fe', '#ff758c', '#ff7eb3'] });
         }
 
         document.getElementById('math-answer').addEventListener('keypress', function (e) {
