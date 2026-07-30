@@ -293,7 +293,7 @@
                 <div class="card">
                     <div class="problem-text" id="math-question"></div>
                     <div class="input-group" id="math-input-group">
-                        <input type="text" id="math-answer" class="answer-input" placeholder="Toca aquí para escribir letras..." autocomplete="off">
+                        <input type="text" id="math-answer" class="answer-input" placeholder="Toca aquí para escribir..." autocomplete="off">
                         
                         <div class="numpad" id="math-numpad">
                             <button class="num-btn" onclick="typeNum('1')">1</button>
@@ -359,15 +359,14 @@
     </div>
 
     <script>
-        // === PEGA AQUÍ TU URL DE GOOGLE APPS SCRIPT TERMINADA EN /exec ===
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyDYOGQixgKb1lQ5bKWFqyxoTHolupdrjQhEyo7MQpGRNw2BcTmKtpyKYsEKLSJuEom/exec'; 
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyDYOGQixgKb1lQ5bKWFqyxoTHolupdrjQhEyo7MQpGRNw2BcTmKtpyKYsEKLSJuEom/exec';
         
+        let datosApp = { problemas: [], dictados: [] };
         let currentMathProblem = null;
         let consecutiveMathWins = 0;
         let currentDifficultyLevel = 1;
         
         let currentDictationId = null;
-        let currentDictationText = "";
         let dictationSentences = [];
         let currentSentenceIndex = 0;
         let speechSynthesis = window.speechSynthesis;
@@ -387,31 +386,27 @@
             "Tranquila Luchi, velo con tu papá y a la próxima sale seguro. 😉"
         ];
 
-        function fetchApi(action, params = {}) {
-            return new Promise((resolve, reject) => {
-                const callbackName = 'jsonp_cb_' + Math.round(100000 * Math.random());
-                let url = `${SCRIPT_URL}?action=${action}&callback=${callbackName}`;
-                
-                for (let key in params) {
-                    url += `&${key}=${encodeURIComponent(params[key])}`;
-                }
+        async function inicializarApp() {
+            showLoading(true);
+            try {
+                const response = await fetch(APPS_SCRIPT_URL);
+                datosApp = await response.json();
+                showLoading(false);
+            } catch (error) {
+                showLoading(false);
+                alert("Error al conectar con la base de datos.");
+            }
+        }
 
-                window[callbackName] = function(data) {
-                    delete window[callbackName];
-                    document.body.removeChild(script);
-                    resolve(data);
-                };
-
-                const script = document.createElement('script');
-                script.src = url;
-                script.onerror = function() {
-                    delete window[callbackName];
-                    document.body.removeChild(script);
-                    reject(new Error('Error de conexión con la API'));
-                };
-                
-                document.body.appendChild(script);
-            });
+        async function enviarPost(payload) {
+            try {
+                await fetch(APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+            } catch (e) {
+                console.log(e);
+            }
         }
 
         function typeNum(char) {
@@ -443,16 +438,41 @@
             return arr[Math.floor(Math.random() * arr.length)];
         }
 
+        function calcularNivelBase() {
+            if (!datosApp.problemas || datosApp.problemas.length === 0) return 1;
+            let nivelSugerido = 1;
+            
+            for (let i = 1; i <= 4; i++) {
+                let problemasDelNivel = datosApp.problemas.filter(p => Number(p.nivel) === i);
+                if (problemasDelNivel.length === 0) continue;
+                
+                let resueltos = problemasDelNivel.filter(p => {
+                    let estado = String(p.resueltoOk).trim().toUpperCase();
+                    return estado === 'SÍ' || estado === 'SI';
+                }).length;
+                
+                if (resueltos / problemasDelNivel.length >= 0.7) { 
+                    nivelSugerido = i + 1; 
+                } else {
+                    break; 
+                }
+            }
+            return nivelSugerido > 5 ? 5 : nivelSugerido;
+        }
+
         function startMath() {
             showView('view-math');
             document.querySelector('.header p').innerText = "¡A pensar fuerte, Luchi!";
             document.getElementById('math-input-group').style.display = 'flex';
             document.getElementById('math-answer').disabled = false;
+            
+            currentDifficultyLevel = calcularNivelBase();
+            consecutiveMathWins = 0;
+            
             loadNextMath();
         }
 
-        async function loadNextMath() {
-            showLoading(true);
+        function loadNextMath() {
             document.getElementById('math-answer').value = '';
             document.getElementById('math-input-group').style.display = 'flex';
             document.getElementById('math-answer').disabled = false;
@@ -460,47 +480,57 @@
             document.getElementById('math-feedback').className = 'feedback-msg';
             document.getElementById('math-level-badge').innerText = `Nivel: ${currentDifficultyLevel}`;
 
-            try {
-                const problem = await fetchApi('getMath', { level: currentDifficultyLevel });
-                onMathProblemLoaded(problem && problem.rowId ? problem : null);
-            } catch (error) {
-                onServerError(error);
-            }
-        }
+            let disponibles = datosApp.problemas.filter(p => {
+                const resOk = String(p.resueltoOk).trim().toUpperCase();
+                return resOk !== 'SÍ' && resOk !== 'SI' && Number(p.nivel) === currentDifficultyLevel;
+            });
 
-        function onMathProblemLoaded(problem) {
-            showLoading(false);
-            if (!problem) {
+            if (disponibles.length === 0) {
+                disponibles = datosApp.problemas.filter(p => {
+                    const resOk = String(p.resueltoOk).trim().toUpperCase();
+                    return resOk !== 'SÍ' && resOk !== 'SI';
+                });
+            }
+
+            if (disponibles.length === 0) {
                 document.getElementById('math-question').innerText = "¡Felicitaciones! 🎉 Los has resuelto todos. Ve con tu papá a pedirle más ejercicios.";
                 document.getElementById('math-input-group').style.display = 'none';
                 triggerConfetti();
                 return;
             }
-            currentMathProblem = problem;
-            document.getElementById('math-question').innerText = problem.enunciado;
+
+            const randomIndex = Math.floor(Math.random() * disponibles.length);
+            currentMathProblem = disponibles[randomIndex];
+            document.getElementById('math-question').innerText = currentMathProblem.enunciado;
         }
 
-        async function checkMathAnswer() {
+        function checkMathAnswer() {
             const userAnswer = document.getElementById('math-answer').value.trim();
             if (!userAnswer) return;
 
-            showLoading(true);
             document.getElementById('math-input-group').style.display = 'none';
 
-            try {
-                const data = await fetchApi('checkMath', {
-                    rowId: currentMathProblem.rowId,
-                    userAnswer: userAnswer,
-                    expectedAnswer: currentMathProblem.respuestaEsperada
-                });
-                onMathChecked(data.isCorrect);
-            } catch (error) {
-                onServerError(error);
-            }
-        }
+            const expectedStr = String(currentMathProblem.respuesta);
+            const expectedNumbers = expectedStr.match(/\d+/g);
+            let isCorrect = false;
 
-        function onMathChecked(isCorrect) {
-            showLoading(false);
+            if (!expectedNumbers) {
+                isCorrect = userAnswer.toLowerCase() === expectedStr.toLowerCase();
+            } else {
+                isCorrect = expectedNumbers.every(num => {
+                    const regex = new RegExp(`\\b${num}\\b`);
+                    return regex.test(userAnswer);
+                });
+            }
+
+            currentMathProblem.resueltoOk = isCorrect ? 'SÍ' : 'NO';
+
+            enviarPost({
+                action: 'updateMath',
+                rowId: currentMathProblem.rowId,
+                isCorrect: isCorrect
+            });
+
             const feedbackEl = document.getElementById('math-feedback');
             
             if (isCorrect) {
@@ -514,7 +544,9 @@
                 triggerConfetti();
             } else {
                 consecutiveMathWins = 0;
-                if (currentDifficultyLevel > 1) currentDifficultyLevel--;
+                if (currentDifficultyLevel > 1) {
+                    currentDifficultyLevel--; 
+                }
                 feedbackEl.innerText = getRandomMessage(errorMessages);
                 feedbackEl.className = 'feedback-msg error';
             }
@@ -542,12 +574,11 @@
             loadNextDictation();
         }
 
-        async function loadNextDictation() {
+        function loadNextDictation() {
             stopDictation();
-            showLoading(true);
             
             if (currentDictationId) {
-                fetchApi('markDictation', { rowId: currentDictationId }).catch(e => console.log(e));
+                enviarPost({ action: 'markDictation', rowId: currentDictationId });
                 currentDictationId = null;
             }
 
@@ -555,27 +586,23 @@
             document.getElementById('btn-next-sentence').style.display = 'none';
             document.querySelector('.play-row').style.display = 'flex';
             document.getElementById('btn-load-next-dict').style.display = 'block';
-            
-            try {
-                const data = await fetchApi('getDictation');
-                onDictationLoaded(data && data.rowId ? data : null);
-            } catch (error) {
-                onServerError(error);
-            }
-        }
 
-        function onDictationLoaded(data) {
-            showLoading(false);
-            if (!data) {
+            let disponibles = datosApp.dictados.filter(d => !d.fecha || String(d.fecha).trim() === '');
+
+            if (disponibles.length === 0) {
                 document.getElementById('dictation-text').innerHTML = "<br>¡Felicitaciones! 🎉 Los has resuelto todos. Ve con tu papá a pedirle más ejercicios.";
                 document.querySelector('.play-row').style.display = 'none';
                 document.getElementById('btn-load-next-dict').style.display = 'none';
                 triggerConfetti();
                 return;
             }
+
+            const randomIndex = Math.floor(Math.random() * disponibles.length);
+            const data = disponibles[randomIndex];
             
             currentDictationId = data.rowId;
-            currentDictationText = data.texto;
+            data.fecha = 'Realizado';
+
             let rawSentences = data.texto.split(/(?<=\.)\s+/);
             dictationSentences = rawSentences.filter(s => s.trim().length > 0);
             currentSentenceIndex = 0;
@@ -614,7 +641,6 @@
             };
 
             speechUtterance.onerror = function(e) {
-                console.error(e);
                 updatePlayButtonUI(false);
             };
 
@@ -647,11 +673,7 @@
             }
         }
 
-        function onServerError(error) {
-            showLoading(false);
-            console.error(error);
-            alert("Hubo un problemita de conexión. ¡Prueba de nuevo, Luchi!");
-        }
+        inicializarApp();
     </script>
 </body>
 </html>
