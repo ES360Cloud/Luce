@@ -287,7 +287,7 @@
                     <button class="btn-back" onclick="goHome()">
                         <i class="fa-solid fa-arrow-left"></i> Volver
                     </button>
-                    <div class="badge-level" id="math-level-badge">Nivel: 1</div>
+                    <div class="badge-level" id="math-level-badge">Nivel: ?</div>
                 </div>
 
                 <div class="card">
@@ -359,12 +359,10 @@
     </div>
 
     <script>
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwoclGcBVqQdOZBKsjgB07ErrN-D9mCw28-POadcWHwKiReOCVRPvcbWVcq-Xxdxlcz/exec';
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyDYOGQixgKb1lQ5bKWFqyxoTHolupdrjQhEyo7MQpGRNw2BcTmKtpyKYsEKLSJuEom/exec';
         
         let datosApp = { problemas: [], dictados: [] };
         let currentMathProblem = null;
-        let consecutiveMathWins = 0;
-        let currentDifficultyLevel = 1;
         
         let currentDictationId = null;
         let dictationSentences = [];
@@ -438,36 +436,11 @@
             return arr[Math.floor(Math.random() * arr.length)];
         }
 
-        function calcularNivelBase() {
-            if (!datosApp.problemas || datosApp.problemas.length === 0) return 1;
-            let nivelSugerido = 1;
-            
-            for (let i = 1; i <= 4; i++) {
-                let problemasDelNivel = datosApp.problemas.filter(p => Number(p.nivel) === i);
-                if (problemasDelNivel.length === 0) continue;
-                
-                let resueltos = problemasDelNivel.filter(p => {
-                    let estado = String(p.resueltoOk).trim().toUpperCase();
-                    return estado === 'SÍ' || estado === 'SI';
-                }).length;
-                
-                if (resueltos / problemasDelNivel.length >= 0.7) { 
-                    nivelSugerido = i + 1; 
-                } else {
-                    break; 
-                }
-            }
-            return nivelSugerido > 5 ? 5 : nivelSugerido;
-        }
-
         function startMath() {
             showView('view-math');
             document.querySelector('.header p').innerText = "¡A pensar fuerte, Luchi!";
             document.getElementById('math-input-group').style.display = 'flex';
             document.getElementById('math-answer').disabled = false;
-            
-            currentDifficultyLevel = calcularNivelBase();
-            consecutiveMathWins = 0;
             
             loadNextMath();
         }
@@ -478,30 +451,25 @@
             document.getElementById('math-answer').disabled = false;
             document.getElementById('btn-next-math').style.display = 'none';
             document.getElementById('math-feedback').className = 'feedback-msg';
-            document.getElementById('math-level-badge').innerText = `Nivel: ${currentDifficultyLevel}`;
 
             let disponibles = datosApp.problemas.filter(p => {
                 const resOk = String(p.resueltoOk).trim().toUpperCase();
-                return resOk !== 'SÍ' && resOk !== 'SI' && Number(p.nivel) === currentDifficultyLevel;
+                return resOk !== 'SÍ' && resOk !== 'SI';
             });
-
-            if (disponibles.length === 0) {
-                disponibles = datosApp.problemas.filter(p => {
-                    const resOk = String(p.resueltoOk).trim().toUpperCase();
-                    return resOk !== 'SÍ' && resOk !== 'SI';
-                });
-            }
 
             if (disponibles.length === 0) {
                 document.getElementById('math-question').innerText = "¡Felicitaciones! 🎉 Los has resuelto todos. Ve con tu papá a pedirle más ejercicios.";
                 document.getElementById('math-input-group').style.display = 'none';
+                document.getElementById('math-level-badge').style.display = 'none';
                 triggerConfetti();
                 return;
             }
 
             const randomIndex = Math.floor(Math.random() * disponibles.length);
             currentMathProblem = disponibles[randomIndex];
+            
             document.getElementById('math-question').innerText = currentMathProblem.enunciado;
+            document.getElementById('math-level-badge').innerText = `Nivel: ${currentMathProblem.nivel}`;
         }
 
         function checkMathAnswer() {
@@ -534,19 +502,10 @@
             const feedbackEl = document.getElementById('math-feedback');
             
             if (isCorrect) {
-                consecutiveMathWins++;
-                if (consecutiveMathWins >= 2 && currentDifficultyLevel < 5) {
-                    currentDifficultyLevel++;
-                    consecutiveMathWins = 0;
-                }
                 feedbackEl.innerText = getRandomMessage(successMessages);
                 feedbackEl.className = 'feedback-msg success';
                 triggerConfetti();
             } else {
-                consecutiveMathWins = 0;
-                if (currentDifficultyLevel > 1) {
-                    currentDifficultyLevel--; 
-                }
                 feedbackEl.innerText = getRandomMessage(errorMessages);
                 feedbackEl.className = 'feedback-msg error';
             }
